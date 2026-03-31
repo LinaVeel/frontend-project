@@ -1,5 +1,6 @@
 import styles from './Message.module.css'
 import ReactMarkdown from 'react-markdown'
+import { useEffect, useRef, useState } from 'react'
 
 type Props = {
   variant: 'user' | 'assistant'
@@ -45,9 +46,29 @@ export default function Message({ variant, content, timestamp }: Props) {
   const senderLabel = isUser ? 'Вы' : 'Ассистент'
   const createdAt = formatTime(timestamp)
 
+  const [copied, setCopied] = useState(false)
+  const copyResetTimeoutId = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutId.current != null) {
+        window.clearTimeout(copyResetTimeoutId.current)
+        copyResetTimeoutId.current = null
+      }
+    }
+  }, [])
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(content)
+      setCopied(true)
+      if (copyResetTimeoutId.current != null) {
+        window.clearTimeout(copyResetTimeoutId.current)
+      }
+      copyResetTimeoutId.current = window.setTimeout(() => {
+        setCopied(false)
+        copyResetTimeoutId.current = null
+      }, 2000)
     } catch {
       // ignore
     }
@@ -66,10 +87,17 @@ export default function Message({ variant, content, timestamp }: Props) {
           <ReactMarkdown>{content}</ReactMarkdown>
         </div>
 
-        <button className={styles.copy} type="button" aria-label="Копировать" onClick={copy}>
-          <CopyIcon />
-          Копировать
-        </button>
+        {!isUser ? (
+          <button
+            className={`${styles.copy} ${copied ? styles.copied : ''}`}
+            type="button"
+            aria-label={copied ? 'Скопировано' : 'Копировать'}
+            onClick={copy}
+          >
+            {!copied ? <CopyIcon /> : null}
+            {copied ? 'Скопировано' : 'Копировать'}
+          </button>
+        ) : null}
       </div>
     </div>
   )

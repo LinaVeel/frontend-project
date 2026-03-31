@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import styles from './InputArea.module.css'
 import Button from '../ui/Button'
 
@@ -24,36 +24,12 @@ function AttachIcon() {
 
 export default function InputArea({ isLoading = false, onSend, onStop }: Props) {
   const [value, setValue] = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const canSend = useMemo(() => value.trim().length > 0 && !isLoading, [value, isLoading])
-
-  useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    const maxHeight = el.dataset.maxHeight ? Number(el.dataset.maxHeight) : 0
-    const next = el.scrollHeight
-    if (maxHeight > 0) {
-      el.style.height = `${Math.min(next, maxHeight)}px`
-      el.style.overflowY = next > maxHeight ? 'auto' : 'hidden'
-    } else {
-      el.style.height = `${next}px`
-    }
+  const rows = useMemo(() => {
+    const lineCount = value.split('\n').length
+    return Math.max(1, Math.min(5, lineCount))
   }, [value])
-
-  useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    const computed = window.getComputedStyle(el)
-    const lineHeight = Number.parseFloat(computed.lineHeight || '0')
-    const paddingTop = Number.parseFloat(computed.paddingTop || '0')
-    const paddingBottom = Number.parseFloat(computed.paddingBottom || '0')
-    const borderTop = Number.parseFloat(computed.borderTopWidth || '0')
-    const borderBottom = Number.parseFloat(computed.borderBottomWidth || '0')
-    const max = lineHeight * 5 + paddingTop + paddingBottom + borderTop + borderBottom
-    el.dataset.maxHeight = String(max)
-  }, [])
 
   const submit = () => {
     if (!canSend) return
@@ -68,15 +44,15 @@ export default function InputArea({ isLoading = false, onSend, onStop }: Props) 
       </button>
 
       <textarea
-        ref={textareaRef}
         className={styles.textarea}
         value={value}
         disabled={isLoading}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Сообщение..."
-        rows={1}
+        rows={rows}
         onKeyDown={(e) => {
           if (isLoading) return
+          if ((e.nativeEvent as KeyboardEvent).isComposing) return
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             submit()
@@ -85,12 +61,15 @@ export default function InputArea({ isLoading = false, onSend, onStop }: Props) 
       />
 
       <div className={styles.actions}>
-        <Button variant="secondary" onClick={onStop}>
-          Стоп
-        </Button>
-        <Button disabled={!canSend} onClick={submit}>
-          Отправить
-        </Button>
+        {isLoading ? (
+          <Button variant="secondary" onClick={onStop}>
+            Стоп
+          </Button>
+        ) : (
+          <Button disabled={!canSend} onClick={submit}>
+            Отправить
+          </Button>
+        )}
       </div>
     </div>
   )

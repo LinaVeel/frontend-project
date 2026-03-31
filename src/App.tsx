@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AppLayout from './components/layout/AppLayout'
 import AuthForm from './components/auth/AuthForm'
 import type { ChatMessage } from './types/message'
@@ -215,49 +215,49 @@ export default function App() {
   const activeChat = useMemo(() => MOCK_CHATS.find((c) => c.id === activeChatId) ?? MOCK_CHATS[0], [activeChatId])
   const messages = MOCK_MESSAGES_BY_CHAT[activeChat.id] ?? []
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+
   if (!isAuthed) {
     return (
-      <div data-theme={theme}>
-        <AuthForm
-          onSubmit={({ credentials, scope }) => {
-            if (!credentials.trim()) return
-            void scope
-            setIsAuthed(true)
-          }}
-        />
-      </div>
+      <AuthForm
+        onSubmit={({ credentials, scope }) => {
+          if (!credentials.trim()) return
+          void scope
+          setIsAuthed(true)
+        }}
+      />
     )
   }
 
   return (
-    <div data-theme={theme}>
-      <AppLayout
-        chats={filteredChats}
-        activeChatId={activeChatId}
-        onSelectChat={(id) => {
-          setActiveChatId(id)
-          setIsSidebarOpen(false)
-        }}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        isSidebarOpen={isSidebarOpen}
-        onSidebarOpenChange={setIsSidebarOpen}
-        chatTitle={activeChat.title}
-        messages={messages}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        isSettingsOpen={isSettingsOpen}
-        onCloseSettings={() => setIsSettingsOpen(false)}
-        settings={settings}
-        onSaveSettings={(next) => {
-          setSettings(next)
-          setTheme(next.theme)
-          setIsSettingsOpen(false)
-        }}
-        onResetSettings={() => {
-          setSettings(DEFAULT_SETTINGS)
-          setTheme(DEFAULT_SETTINGS.theme)
-        }}
-      />
-    </div>
+    <AppLayout
+      chats={filteredChats}
+      activeChatId={activeChatId}
+      onSelectChat={(id) => {
+        setActiveChatId(id)
+        setIsSidebarOpen(false)
+      }}
+      searchQuery={searchQuery}
+      onSearchQueryChange={setSearchQuery}
+      isSidebarOpen={isSidebarOpen}
+      onSidebarOpenChange={setIsSidebarOpen}
+      chatTitle={activeChat.title}
+      messages={messages}
+      onOpenSettings={() => setIsSettingsOpen(true)}
+      isSettingsOpen={isSettingsOpen}
+      onCloseSettings={() => setIsSettingsOpen(false)}
+      settings={settings}
+      onSaveSettings={(next) => {
+        setSettings(next)
+        setTheme(next.theme)
+        setIsSettingsOpen(false)
+      }}
+      onResetSettings={() => {
+        setSettings(DEFAULT_SETTINGS)
+        setTheme(DEFAULT_SETTINGS.theme)
+      }}
+    />
   )
 }

@@ -110,7 +110,26 @@
   pointer-events: auto;
 }
 
+.bubble:focus-within .copy {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .assistant .copy:hover {
   color: var(--color-text);
   border-color: var(--color-primary);
+}
+
+.copied {
+  opacity: 1;
+  pointer-events: auto;
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .assistant .copy {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }

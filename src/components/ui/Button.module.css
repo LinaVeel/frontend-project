@@ -30,7 +30,7 @@
     color-mix(in srgb, var(--color-primary) 92%, white),
     var(--color-primary)
   );
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .primary:hover:not(:disabled) {
