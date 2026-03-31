@@ -3,6 +3,7 @@ import styles from './InputArea.module.css'
 import Button from '../ui/Button'
 
 type Props = {
+  isLoading?: boolean
   onSend: (text: string) => void
   onStop: () => void
 }
@@ -21,11 +22,11 @@ function AttachIcon() {
   )
 }
 
-export default function InputArea({ onSend, onStop }: Props) {
+export default function InputArea({ isLoading = false, onSend, onStop }: Props) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-  const canSend = useMemo(() => value.trim().length > 0, [value])
+  const canSend = useMemo(() => value.trim().length > 0 && !isLoading, [value, isLoading])
 
   useEffect(() => {
     const el = textareaRef.current
@@ -56,7 +57,7 @@ export default function InputArea({ onSend, onStop }: Props) {
 
   const submit = () => {
     if (!canSend) return
-    onSend(value)
+    onSend(value.trim())
     setValue('')
   }
 
@@ -70,10 +71,12 @@ export default function InputArea({ onSend, onStop }: Props) {
         ref={textareaRef}
         className={styles.textarea}
         value={value}
+        disabled={isLoading}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Сообщение..."
         rows={1}
         onKeyDown={(e) => {
+          if (isLoading) return
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             submit()

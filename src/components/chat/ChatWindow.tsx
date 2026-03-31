@@ -1,13 +1,29 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './ChatWindow.module.css'
 import MessageList from './MessageList'
 import InputArea from './InputArea'
-import type { ChatMessage } from '../../App'
+import type { ChatMessage } from '../../types/message'
 
 type Props = {
   title: string
-  messages: ChatMessage[]
+  chatId: string
+  initialMessages: ChatMessage[]
   onOpenSettings: () => void
   onOpenSidebar: () => void
+}
+
+function formatAssistantReply(userText: string) {
+  const trimmed = userText.trim()
+  if (!trimmed) return 'Понял.'
+  if (trimmed.length <= 80) return `Понял: ${trimmed}`
+  return `Понял. Коротко: ${trimmed.slice(0, 80).trim()}…`
+}
+
+function makeId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`
 }
 
 function BurgerIcon() {
@@ -39,7 +55,68 @@ function SettingsIcon() {
   )
 }
 
-export default function ChatWindow({ title, messages, onOpenSettings, onOpenSidebar }: Props) {
+export default function ChatWindow({ title, chatId, initialMessages, onOpenSettings, onOpenSidebar }: Props) {
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const endRef = useRef<HTMLDivElement | null>(null)
+  const pendingReplyTimeoutId = useRef<number | null>(null)
+
+  const stop = useCallback(() => {
+    if (pendingReplyTimeoutId.current != null) {
+      window.clearTimeout(pendingReplyTimeoutId.current)
+      pendingReplyTimeoutId.current = null
+    }
+    setIsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    setMessages(initialMessages)
+    stop()
+  }, [chatId, initialMessages, stop])
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  useEffect(() => {
+    return () => {
+      if (pendingReplyTimeoutId.current != null) {
+        window.clearTimeout(pendingReplyTimeoutId.current)
+        pendingReplyTimeoutId.current = null
+      }
+    }
+  }, [])
+
+  const send = useCallback((text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed || isLoading) return
+
+    const userMessage: ChatMessage = {
+      id: makeId(),
+      role: 'user',
+      content: trimmed,
+      timestamp: new Date().toISOString(),
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setIsLoading(true)
+
+    const delay = 1000 + Math.floor(Math.random() * 1000)
+    pendingReplyTimeoutId.current = window.setTimeout(() => {
+      const assistantMessage: ChatMessage = {
+        id: makeId(),
+        role: 'assistant',
+        content: formatAssistantReply(trimmed),
+        timestamp: new Date().toISOString(),
+      }
+
+      setMessages((prev) => [...prev, assistantMessage])
+      setIsLoading(false)
+      pendingReplyTimeoutId.current = null
+    }, delay)
+  }, [isLoading])
+
   return (
     <section className={styles.root}>
       <header className={styles.header}>
@@ -55,17 +132,14 @@ export default function ChatWindow({ title, messages, onOpenSettings, onOpenSide
       </header>
 
       <div className={styles.messages}>
-        <MessageList messages={messages} typingVisible />
+        <MessageList messages={messages} isLoading={isLoading} endRef={endRef} />
       </div>
 
       <div className={styles.input}>
         <InputArea
-          onSend={(text) => {
-            void text
-          }}
-          onStop={() => {
-            // stub
-          }}
+          isLoading={isLoading}
+          onSend={send}
+          onStop={stop}
         />
       </div>
     </section>

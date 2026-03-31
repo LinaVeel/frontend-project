@@ -2,7 +2,8 @@ import styles from './AppLayout.module.css'
 import Sidebar from '../sidebar/Sidebar'
 import ChatWindow from '../chat/ChatWindow'
 import SettingsPanel from '../settings/SettingsPanel'
-import type { Chat, ChatMessage, Settings } from '../../App'
+import type { Chat, Settings } from '../../App'
+import type { ChatMessage } from '../../types/message'
 
 type Props = {
   chats: Chat[]
@@ -81,7 +82,8 @@ export default function AppLayout({
       <div className={styles.chatArea}>
         <ChatWindow
           title={chatTitle}
-          messages={messages}
+          chatId={activeChatId}
+          initialMessages={messages}
           onOpenSettings={onOpenSettings}
           onOpenSidebar={() => onSidebarOpenChange(true)}
         />

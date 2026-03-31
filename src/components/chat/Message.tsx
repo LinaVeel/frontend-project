@@ -2,10 +2,16 @@ import styles from './Message.module.css'
 import ReactMarkdown from 'react-markdown'
 
 type Props = {
-  role: 'user' | 'assistant'
-  senderLabel: string
+  variant: 'user' | 'assistant'
   content: string
-  createdAt?: string
+  timestamp?: string
+}
+
+function formatTime(value?: string) {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
 function CopyIcon() {
@@ -33,9 +39,11 @@ function AssistantAvatar() {
   return <div className={styles.avatar}>G</div>
 }
 
-export default function Message({ role, senderLabel, content, createdAt }: Props) {
-  const isUser = role === 'user'
+export default function Message({ variant, content, timestamp }: Props) {
+  const isUser = variant === 'user'
   const variantClass = isUser ? styles.user : styles.assistant
+  const senderLabel = isUser ? 'Вы' : 'Ассистент'
+  const createdAt = formatTime(timestamp)
 
   const copy = async () => {
     try {

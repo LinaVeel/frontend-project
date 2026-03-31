@@ -13,6 +13,10 @@
   font-weight: 700;
 }
 
+.root:focus-visible {
+  outline: none;
+}
+
 .root:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -21,11 +25,17 @@
 .primary {
   border-color: transparent;
   background: var(--color-primary);
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary) 92%, white),
+    var(--color-primary)
+  );
   color: #fff;
 }
 
 .primary:hover:not(:disabled) {
   filter: brightness(0.98);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent) inset;
 }
 
 .secondary {

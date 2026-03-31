@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import AppLayout from './components/layout/AppLayout'
 import AuthForm from './components/auth/AuthForm'
+import type { ChatMessage } from './types/message'
 
 export type ThemeMode = 'light' | 'dark'
 export type ModelName = 'GigaChat' | 'GigaChat-Plus' | 'GigaChat-Pro' | 'GigaChat-Max'
@@ -10,15 +11,6 @@ export type Chat = {
   id: string
   title: string
   lastMessageAt: string
-}
-
-export type MessageRole = 'user' | 'assistant'
-export type ChatMessage = {
-  id: string
-  role: MessageRole
-  senderLabel: string
-  content: string
-  createdAt: string
 }
 
 export type Settings = {
@@ -52,44 +44,38 @@ const MOCK_MESSAGES_BY_CHAT: Record<string, ChatMessage[]> = {
     {
       id: 'm1',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '10:20',
+      timestamp: '2026-03-31T10:20:00.000Z',
       content:
         'Привет! Вот **краткий план**:\n\n- Сделаем layout\n- Добавим sidebar\n- Соберём chat window\n\n```ts\ntype Plan = { step: string }\n```',
     },
     {
       id: 'm2',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '10:22',
+      timestamp: '2026-03-31T10:22:00.000Z',
       content: 'Ок, начнём. Нужна поддержка *markdown* и адаптивность.',
     },
     {
       id: 'm3',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '10:23',
+      timestamp: '2026-03-31T10:23:00.000Z',
       content: 'Принято. Стили сделаем через CSS Modules + CSS-переменные.',
     },
     {
       id: 'm4',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '10:24',
+      timestamp: '2026-03-31T10:24:00.000Z',
       content: 'Сообщения пользователя справа, ассистента слева.',
     },
     {
       id: 'm5',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '10:25',
+      timestamp: '2026-03-31T10:25:00.000Z',
       content: 'Сделаем два варианта `user/assistant` и кнопку копирования по hover.',
     },
     {
       id: 'm6',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '10:26',
+      timestamp: '2026-03-31T10:26:00.000Z',
       content: 'Отлично!',
     },
   ],
@@ -97,43 +83,37 @@ const MOCK_MESSAGES_BY_CHAT: Record<string, ChatMessage[]> = {
     {
       id: 'm1',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '09:10',
+      timestamp: '2026-03-30T09:10:00.000Z',
       content: 'На мобилке sidebar скрываем, показываем кнопку-бургер.',
     },
     {
       id: 'm2',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '09:11',
+      timestamp: '2026-03-30T09:11:00.000Z',
       content: 'Ок, открытие можно как оверлей.',
     },
     {
       id: 'm3',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '09:12',
+      timestamp: '2026-03-30T09:12:00.000Z',
       content: 'Да, и закрывать по клику в backdrop — просто и понятно.',
     },
     {
       id: 'm4',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '09:13',
+      timestamp: '2026-03-30T09:13:00.000Z',
       content: 'Супер.',
     },
     {
       id: 'm5',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '09:14',
+      timestamp: '2026-03-30T09:14:00.000Z',
       content: 'Список чатов — минимум 5, с датой и действиями по hover.',
     },
     {
       id: 'm6',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '09:15',
+      timestamp: '2026-03-30T09:15:00.000Z',
       content: 'Понял.',
     },
   ],
@@ -141,43 +121,37 @@ const MOCK_MESSAGES_BY_CHAT: Record<string, ChatMessage[]> = {
     {
       id: 'm1',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '18:01',
+      timestamp: '2026-03-29T18:01:00.000Z',
       content: 'Типизируем props каждого компонента — обязательно.',
     },
     {
       id: 'm2',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '18:02',
+      timestamp: '2026-03-29T18:02:00.000Z',
       content: 'Ок.',
     },
     {
       id: 'm3',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '18:03',
+      timestamp: '2026-03-29T18:03:00.000Z',
       content: 'Без Redux/Zustand и без тестов на этом этапе.',
     },
     {
       id: 'm4',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '18:04',
+      timestamp: '2026-03-29T18:04:00.000Z',
       content: 'Хорошо.',
     },
     {
       id: 'm5',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '18:05',
+      timestamp: '2026-03-29T18:05:00.000Z',
       content: 'Сборку потом проверим через `npm run build`.',
     },
     {
       id: 'm6',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '18:06',
+      timestamp: '2026-03-29T18:06:00.000Z',
       content: 'Да.',
     },
   ],
@@ -185,44 +159,38 @@ const MOCK_MESSAGES_BY_CHAT: Record<string, ChatMessage[]> = {
     {
       id: 'm1',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '14:40',
+      timestamp: '2026-03-28T14:40:00.000Z',
       content:
         'Пример markdown:\n\n1. **жирный**\n2. *курсив*\n3. Список\n\n```js\nconsole.log("hi")\n```',
     },
     {
       id: 'm2',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '14:41',
+      timestamp: '2026-03-28T14:41:00.000Z',
       content: 'Проверим в `react-markdown`.',
     },
     {
       id: 'm3',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '14:42',
+      timestamp: '2026-03-28T14:42:00.000Z',
       content: 'Да, а кнопку Copy покажем только при наведении.',
     },
     {
       id: 'm4',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '14:43',
+      timestamp: '2026-03-28T14:43:00.000Z',
       content: 'Ок.',
     },
     {
       id: 'm5',
       role: 'assistant',
-      senderLabel: 'GigaChat',
-      createdAt: '14:44',
+      timestamp: '2026-03-28T14:44:00.000Z',
       content: 'Сообщения юзера справа и другим цветом.',
     },
     {
       id: 'm6',
       role: 'user',
-      senderLabel: 'Вы',
-      createdAt: '14:45',
+      timestamp: '2026-03-28T14:45:00.000Z',
       content: 'Принял.',
     },
   ],

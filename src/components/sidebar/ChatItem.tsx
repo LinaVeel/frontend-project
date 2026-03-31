@@ -1,5 +1,5 @@
 import styles from './ChatItem.module.css'
-import type { ReactNode } from 'react'
+import type { MouseEventHandler, ReactNode } from 'react'
 import type { Chat } from '../../App'
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
   onDelete: () => void
 }
 
-function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+function IconButton({ label, onClick, children }: { label: string; onClick: MouseEventHandler<HTMLButtonElement>; children: ReactNode }) {
   return (
     <button className={styles.iconButton} type="button" aria-label={label} onClick={onClick}>
       {children}
