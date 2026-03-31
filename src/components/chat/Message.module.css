@@ -72,6 +72,41 @@
   overflow: auto;
 }
 
+.content pre :global(code.hljs) {
+  display: block;
+  background: transparent;
+  padding: 0;
+}
+
+.content :global(.hljs) {
+  color: currentColor;
+}
+
+.content :global(.hljs-comment),
+.content :global(.hljs-quote) {
+  color: var(--color-muted);
+}
+
+.content :global(.hljs-keyword),
+.content :global(.hljs-selector-tag),
+.content :global(.hljs-literal) {
+  color: var(--color-danger);
+}
+
+.content :global(.hljs-string),
+.content :global(.hljs-regexp),
+.content :global(.hljs-section) {
+  color: var(--color-primary);
+}
+
+.content :global(.hljs-title),
+.content :global(.hljs-name),
+.content :global(.hljs-type),
+.content :global(.hljs-attribute) {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
 .user .content pre {
   background: rgba(255, 255, 255, 0.18);
 }

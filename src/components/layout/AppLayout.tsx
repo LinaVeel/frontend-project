@@ -2,57 +2,62 @@ import styles from './AppLayout.module.css'
 import Sidebar from '../sidebar/Sidebar'
 import ChatWindow from '../chat/ChatWindow'
 import SettingsPanel from '../settings/SettingsPanel'
-import type { Chat, Settings } from '../../App'
-import type { ChatMessage } from '../../types/message'
+import AuthForm from '../auth/AuthForm'
+import { useChat } from '../../app/providers/ChatProvider'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
-type Props = {
-  chats: Chat[]
-  activeChatId: string
-  onSelectChat: (id: string) => void
-  searchQuery: string
-  onSearchQueryChange: (value: string) => void
+export default function AppLayout() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const {
+    state,
+    setAuth,
+    setSettings,
+    resetSettings,
+    setActiveChat,
+  } = useChat()
 
-  isSidebarOpen: boolean
-  onSidebarOpenChange: (next: boolean) => void
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
-  chatTitle: string
-  messages: ChatMessage[]
-  onOpenSettings: () => void
+  const activeChatId = state.activeChatId
 
-  isSettingsOpen: boolean
-  onCloseSettings: () => void
-  settings: Settings
-  onSaveSettings: (next: Settings) => void
-  onResetSettings: () => void
-}
+  useEffect(() => {
+    if (!id) return
+    const exists = state.chats.some((c) => c.id === id)
+    if (!exists) {
+      navigate('/', { replace: true })
+      return
+    }
+    if (activeChatId !== id) {
+      setActiveChat(id)
+    }
+  }, [id, state.chats, activeChatId, navigate, setActiveChat])
 
-export default function AppLayout({
-  chats,
-  activeChatId,
-  onSelectChat,
-  searchQuery,
-  onSearchQueryChange,
-  isSidebarOpen,
-  onSidebarOpenChange,
-  chatTitle,
-  messages,
-  onOpenSettings,
-  isSettingsOpen,
-  onCloseSettings,
-  settings,
-  onSaveSettings,
-  onResetSettings,
-}: Props) {
+  const activeChat = useMemo(() => {
+    if (!activeChatId) return null
+    return state.chats.find((c) => c.id === activeChatId) ?? null
+  }, [state.chats, activeChatId])
+
+  const title = activeChat?.title ?? ''
+
+  if (!state.auth) {
+    return (
+      <AuthForm
+        onSubmit={({ credentials, scope }) => {
+          if (!credentials.trim()) return
+          setAuth({ credentials: credentials.trim(), scope })
+        }}
+      />
+    )
+  }
+
   return (
     <div className={styles.root}>
       <div className={styles.desktopSidebar}>
         <Sidebar
-          chats={chats}
-          activeChatId={activeChatId}
-          onSelectChat={onSelectChat}
-          searchQuery={searchQuery}
-          onSearchQueryChange={onSearchQueryChange}
-          onNewChat={() => onSelectChat('c5')}
+          onNavigate={() => setIsSidebarOpen(false)}
         />
       </div>
 
@@ -61,19 +66,14 @@ export default function AppLayout({
           className={styles.mobileSidebarBackdrop}
           role="button"
           tabIndex={0}
-          onClick={() => onSidebarOpenChange(false)}
+          onClick={() => setIsSidebarOpen(false)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') onSidebarOpenChange(false)
+            if (e.key === 'Escape') setIsSidebarOpen(false)
           }}
         >
           <div className={styles.mobileSidebar} onClick={(e) => e.stopPropagation()}>
             <Sidebar
-              chats={chats}
-              activeChatId={activeChatId}
-              onSelectChat={onSelectChat}
-              searchQuery={searchQuery}
-              onSearchQueryChange={onSearchQueryChange}
-              onNewChat={() => onSelectChat('c5')}
+              onNavigate={() => setIsSidebarOpen(false)}
             />
           </div>
         </div>
@@ -81,20 +81,22 @@ export default function AppLayout({
 
       <div className={styles.chatArea}>
         <ChatWindow
-          title={chatTitle}
+          title={title}
           chatId={activeChatId}
-          initialMessages={messages}
-          onOpenSettings={onOpenSettings}
-          onOpenSidebar={() => onSidebarOpenChange(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenSidebar={() => setIsSidebarOpen(true)}
         />
       </div>
 
       <SettingsPanel
         isOpen={isSettingsOpen}
-        settings={settings}
-        onClose={onCloseSettings}
-        onSave={onSaveSettings}
-        onReset={onResetSettings}
+        settings={state.settings}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={(next) => {
+          setSettings(next)
+          setIsSettingsOpen(false)
+        }}
+        onReset={resetSettings}
       />
     </div>
   )

@@ -3,10 +3,12 @@ import Message from './Message'
 import TypingIndicator from './TypingIndicator'
 import EmptyState from '../ui/EmptyState'
 import type { RefObject } from 'react'
-import type { ChatMessage } from '../../types/message'
+import type { Message as ChatMessage } from '../../app/providers/chatTypes'
+
+type UiMessage = Omit<ChatMessage, 'role'> & { role: 'user' | 'assistant' }
 
 type Props = {
-  messages: ChatMessage[]
+  messages: UiMessage[]
   isLoading?: boolean
   endRef?: RefObject<HTMLDivElement>
 }

@@ -1,6 +1,7 @@
 import styles from './Message.module.css'
 import ReactMarkdown from 'react-markdown'
 import { useEffect, useRef, useState } from 'react'
+import rehypeHighlight from 'rehype-highlight'
 
 type Props = {
   variant: 'user' | 'assistant'
@@ -84,7 +85,9 @@ export default function Message({ variant, content, timestamp }: Props) {
         </div>
 
         <div className={styles.content}>
-          <ReactMarkdown>{content}</ReactMarkdown>
+          <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+            {content}
+          </ReactMarkdown>
         </div>
 
         {!isUser ? (

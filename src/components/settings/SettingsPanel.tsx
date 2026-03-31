@@ -3,7 +3,7 @@ import styles from './SettingsPanel.module.css'
 import Button from '../ui/Button'
 import Toggle from '../ui/Toggle'
 import Slider from '../ui/Slider'
-import type { ModelName, Settings, ThemeMode } from '../../App'
+import type { ModelName, Settings, ThemeMode } from '../../app/providers/chatTypes'
 
 type Props = {
   isOpen: boolean

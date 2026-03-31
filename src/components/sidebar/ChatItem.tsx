@@ -1,9 +1,9 @@
 import styles from './ChatItem.module.css'
 import type { MouseEventHandler, ReactNode } from 'react'
-import type { Chat } from '../../App'
+import type { ChatListItem } from './ChatList'
 
 type Props = {
-  chat: Chat
+  chat: ChatListItem
   isActive: boolean
   onClick: () => void
   onEdit: () => void
@@ -82,7 +82,7 @@ export default function ChatItem({ chat, isActive, onClick, onEdit, onDelete }: 
           <div className={styles.title} title={chat.title}>
             {chat.title}
           </div>
-          <div className={styles.date}>{chat.lastMessageAt}</div>
+          <div className={styles.date}>{chat.lastMessageAtLabel}</div>
         </div>
         <div className={styles.actions}>
           <IconButton

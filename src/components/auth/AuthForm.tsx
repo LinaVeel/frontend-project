@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import styles from './AuthForm.module.css'
 import Button from '../ui/Button'
 import ErrorMessage from '../ui/ErrorMessage'
-import type { ScopeName } from '../../App'
+import type { ScopeName } from '../../app/providers/chatTypes'
 
 type Props = {
   onSubmit: (params: { credentials: string; scope: ScopeName }) => void
@@ -32,14 +32,14 @@ export default function AuthForm({ onSubmit }: Props) {
       <div className={styles.card}>
         <div className={styles.title}>Вход</div>
         <div className={styles.field}>
-          <label className={styles.label}>Credentials (Base64)</label>
+          <label className={styles.label}>Credentials (Base64) или Bearer token</label>
           <input
             className={styles.input}
             type="password"
             value={credentials}
             onChange={(e) => setCredentials(e.target.value)}
             onBlur={() => setTouched(true)}
-            placeholder="••••••••"
+            placeholder="Base64 или Bearer …"
           />
           {error ? <ErrorMessage message={error} /> : null}
         </div>

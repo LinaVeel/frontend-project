@@ -55,6 +55,12 @@
   background: var(--color-surface);
 }
 
+.error {
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
 @media (min-width: 769px) {
   .burger {
     display: none;

@@ -1,29 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import styles from './ChatWindow.module.css'
 import MessageList from './MessageList'
 import InputArea from './InputArea'
-import type { ChatMessage } from '../../types/message'
+import { useChat } from '../../app/providers/ChatProvider'
+import ErrorMessage from '../ui/ErrorMessage'
+import type { Message } from '../../app/providers/chatTypes'
 
 type Props = {
   title: string
-  chatId: string
-  initialMessages: ChatMessage[]
+  chatId: string | null
   onOpenSettings: () => void
   onOpenSidebar: () => void
-}
-
-function formatAssistantReply(userText: string) {
-  const trimmed = userText.trim()
-  if (!trimmed) return 'Понял.'
-  if (trimmed.length <= 80) return `Понял: ${trimmed}`
-  return `Понял. Коротко: ${trimmed.slice(0, 80).trim()}…`
-}
-
-function makeId() {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`
 }
 
 function BurgerIcon() {
@@ -55,67 +42,34 @@ function SettingsIcon() {
   )
 }
 
-export default function ChatWindow({ title, chatId, initialMessages, onOpenSettings, onOpenSidebar }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
-  const [isLoading, setIsLoading] = useState(false)
+type VisibleMessage = Message & { role: 'user' | 'assistant' }
+
+export default function ChatWindow({ title, chatId, onOpenSettings, onOpenSidebar }: Props) {
+  const { state, sendMessage, stop } = useChat()
+
+  const messages = useMemo(() => {
+    if (!chatId) return []
+    return (state.messagesByChatId[chatId] ?? []).filter(
+      (m): m is VisibleMessage => m.role !== 'system',
+    )
+  }, [state.messagesByChatId, chatId])
+
+  const isLoading = chatId ? Boolean(state.isLoadingByChatId[chatId]) : false
+  const error = chatId ? state.errorByChatId[chatId] : null
 
   const endRef = useRef<HTMLDivElement | null>(null)
-  const pendingReplyTimeoutId = useRef<number | null>(null)
-
-  const stop = useCallback(() => {
-    if (pendingReplyTimeoutId.current != null) {
-      window.clearTimeout(pendingReplyTimeoutId.current)
-      pendingReplyTimeoutId.current = null
-    }
-    setIsLoading(false)
-  }, [])
-
-  useEffect(() => {
-    setMessages(initialMessages)
-    stop()
-  }, [chatId, initialMessages, stop])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  useEffect(() => {
-    return () => {
-      if (pendingReplyTimeoutId.current != null) {
-        window.clearTimeout(pendingReplyTimeoutId.current)
-        pendingReplyTimeoutId.current = null
-      }
-    }
-  }, [])
-
-  const send = useCallback((text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed || isLoading) return
-
-    const userMessage: ChatMessage = {
-      id: makeId(),
-      role: 'user',
-      content: trimmed,
-      timestamp: new Date().toISOString(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setIsLoading(true)
-
-    const delay = 1000 + Math.floor(Math.random() * 1000)
-    pendingReplyTimeoutId.current = window.setTimeout(() => {
-      const assistantMessage: ChatMessage = {
-        id: makeId(),
-        role: 'assistant',
-        content: formatAssistantReply(trimmed),
-        timestamp: new Date().toISOString(),
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
-      setIsLoading(false)
-      pendingReplyTimeoutId.current = null
-    }, delay)
-  }, [isLoading])
+  const send = useCallback(
+    (text: string) => {
+      if (isLoading) return
+      void sendMessage(text)
+    },
+    [sendMessage, isLoading],
+  )
 
   return (
     <section className={styles.root}>
@@ -134,6 +88,12 @@ export default function ChatWindow({ title, chatId, initialMessages, onOpenSetti
       <div className={styles.messages}>
         <MessageList messages={messages} isLoading={isLoading} endRef={endRef} />
       </div>
+
+      {error ? (
+        <div className={styles.error}>
+          <ErrorMessage message={error} />
+        </div>
+      ) : null}
 
       <div className={styles.input}>
         <InputArea

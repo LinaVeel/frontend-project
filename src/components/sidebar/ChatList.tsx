@@ -1,14 +1,21 @@
 import styles from './ChatList.module.css'
 import ChatItem from './ChatItem'
-import type { Chat } from '../../App'
 
-type Props = {
-  chats: Chat[]
-  activeChatId: string
-  onSelectChat: (id: string) => void
+export type ChatListItem = {
+  id: string
+  title: string
+  lastMessageAtLabel: string
 }
 
-export default function ChatList({ chats, activeChatId, onSelectChat }: Props) {
+type Props = {
+  chats: ChatListItem[]
+  activeChatId: string | null
+  onSelectChat: (id: string) => void
+  onEditChat: (id: string) => void
+  onDeleteChat: (id: string) => void
+}
+
+export default function ChatList({ chats, activeChatId, onSelectChat, onEditChat, onDeleteChat }: Props) {
   return (
     <div className={styles.root}>
       {chats.map((chat) => (
@@ -17,12 +24,8 @@ export default function ChatList({ chats, activeChatId, onSelectChat }: Props) {
           chat={chat}
           isActive={chat.id === activeChatId}
           onClick={() => onSelectChat(chat.id)}
-          onEdit={() => {
-            // mock
-          }}
-          onDelete={() => {
-            // mock
-          }}
+          onEdit={() => onEditChat(chat.id)}
+          onDelete={() => onDeleteChat(chat.id)}
         />
       ))}
     </div>
