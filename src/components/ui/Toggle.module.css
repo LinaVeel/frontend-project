@@ -1,0 +1,29 @@
+.root {
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-muted);
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.on {
+  background: var(--color-surface-2);
+  border-color: var(--color-primary);
+}
+
+.on .thumb {
+  transform: translateX(18px);
+  background: var(--color-primary);
+}

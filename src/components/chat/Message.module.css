@@ -1,0 +1,116 @@
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.rowAssistant {
+  justify-content: flex-start;
+}
+
+.rowUser {
+  justify-content: flex-end;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.bubble {
+  position: relative;
+  max-width: min(680px, 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 10px 12px;
+}
+
+.assistant {
+  background: var(--color-assistant-bubble);
+  color: var(--color-assistant-text);
+}
+
+.user {
+  background: var(--color-user-bubble);
+  color: var(--color-user-text);
+  border-color: transparent;
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.sender {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.time {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.content {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.content pre {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  overflow: auto;
+}
+
+.user .content pre {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+.copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.15);
+  color: inherit;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  font-size: 12px;
+}
+
+.assistant .copy {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+
+.bubble:hover .copy {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.assistant .copy:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}

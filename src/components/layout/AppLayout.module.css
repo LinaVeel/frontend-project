@@ -1,0 +1,43 @@
+.root {
+  height: 100vh;
+  display: flex;
+  background: var(--color-bg);
+}
+
+.desktopSidebar {
+  width: 320px;
+  flex: 0 0 320px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.chatArea {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+
+.mobileSidebarBackdrop {
+  display: none;
+}
+
+.mobileSidebar {
+  width: min(320px, 86vw);
+  height: 100vh;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .desktopSidebar {
+    display: none;
+  }
+
+  .mobileSidebarBackdrop {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: var(--color-overlay);
+    z-index: 40;
+  }
+}
