@@ -11,13 +11,15 @@ export default defineConfig({
       '/oauth': {
         target: 'https://ngw.devices.sberbank.ru:9443',
         changeOrigin: true,
-        secure: true,
+        // Dev-only: avoid TLS verification issues inside Docker/corp networks.
+        secure: false,
         rewrite: (path) => path.replace(/^\/oauth\b/, '/api/v2/oauth'),
       },
       '/api/v1': {
         target: 'https://gigachat.devices.sberbank.ru',
         changeOrigin: true,
-        secure: true,
+        // Dev-only: avoid TLS verification issues inside Docker/corp networks.
+        secure: false,
       },
     },
   },

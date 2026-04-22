@@ -65,6 +65,12 @@ function maybeAddEnvHint(message: string): string {
   return `${message}\n\nПохоже, VITE_GIGACHAT_BASE_URL указывает на OpenAI-proxy/backend. Проверьте переменные окружения или смените base URL на официальный GigaChat.`
 }
 
+async function throwHttpError(res: Response, context: string): Promise<never> {
+  const msg = await responseErrorMessage(res)
+  const base = msg || `HTTP ${res.status}`
+  throw new Error(maybeAddEnvHint(`${context}: ${base}`))
+}
+
 function getApiBaseUrl() {
   const env = import.meta.env as Record<string, string | undefined>
   const raw = env.VITE_GIGACHAT_BASE_URL
@@ -145,8 +151,7 @@ export async function fetchAccessToken(params: {
   }
 
   if (!res.ok) {
-    const msg = await responseErrorMessage(res)
-    throw new Error(maybeAddEnvHint(msg || `HTTP ${res.status}`))
+    await throwHttpError(res, 'OAuth')
   }
 
   const data = (await res.json()) as OAuthTokenResponse
@@ -231,8 +236,7 @@ export async function streamChatCompletion(
   }
 
   if (!res.ok) {
-    const msg = await responseErrorMessage(res)
-    throw new Error(maybeAddEnvHint(msg || `HTTP ${res.status}`))
+    await throwHttpError(res, 'ChatCompletions(stream)')
   }
 
   if (!res.body) {
@@ -293,8 +297,7 @@ export async function chatCompletion(params: ChatCompletionParams): Promise<stri
   }
 
   if (!res.ok) {
-    const msg = await responseErrorMessage(res)
-    throw new Error(maybeAddEnvHint(msg || `HTTP ${res.status}`))
+    await throwHttpError(res, 'ChatCompletions')
   }
 
   const data = (await res.json()) as unknown
