@@ -1,18 +1,17 @@
 import styles from './AppLayout.module.css'
-import Sidebar from '../sidebar/Sidebar'
 import ChatWindow from '../chat/ChatWindow'
-import SettingsPanel from '../settings/SettingsPanel'
-import AuthForm from '../auth/AuthForm'
 import { useChat } from '../../app/providers/ChatProvider'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+
+const Sidebar = lazy(() => import('../sidebar/Sidebar'))
+const SettingsPanel = lazy(() => import('../settings/SettingsPanel'))
 
 export default function AppLayout() {
   const { id } = useParams()
   const navigate = useNavigate()
   const {
     state,
-    setAuth,
     setSettings,
     resetSettings,
     setActiveChat,
@@ -42,23 +41,12 @@ export default function AppLayout() {
 
   const title = activeChat?.title ?? ''
 
-  if (!state.auth) {
-    return (
-      <AuthForm
-        onSubmit={({ credentials, scope }) => {
-          if (!credentials.trim()) return
-          setAuth({ credentials: credentials.trim(), scope })
-        }}
-      />
-    )
-  }
-
   return (
     <div className={styles.root}>
       <div className={styles.desktopSidebar}>
-        <Sidebar
-          onNavigate={() => setIsSidebarOpen(false)}
-        />
+        <Suspense fallback={<div aria-busy="true">Загрузка…</div>}>
+          <Sidebar onNavigate={() => setIsSidebarOpen(false)} />
+        </Suspense>
       </div>
 
       {isSidebarOpen ? (
@@ -72,9 +60,9 @@ export default function AppLayout() {
           }}
         >
           <div className={styles.mobileSidebar} onClick={(e) => e.stopPropagation()}>
-            <Sidebar
-              onNavigate={() => setIsSidebarOpen(false)}
-            />
+            <Suspense fallback={<div aria-busy="true">Загрузка…</div>}>
+              <Sidebar onNavigate={() => setIsSidebarOpen(false)} />
+            </Suspense>
           </div>
         </div>
       ) : null}
@@ -88,16 +76,20 @@ export default function AppLayout() {
         />
       </div>
 
-      <SettingsPanel
-        isOpen={isSettingsOpen}
-        settings={state.settings}
-        onClose={() => setIsSettingsOpen(false)}
-        onSave={(next) => {
-          setSettings(next)
-          setIsSettingsOpen(false)
-        }}
-        onReset={resetSettings}
-      />
+      {isSettingsOpen ? (
+        <Suspense fallback={<div aria-busy="true">Загрузка…</div>}>
+          <SettingsPanel
+            isOpen={isSettingsOpen}
+            settings={state.settings}
+            onClose={() => setIsSettingsOpen(false)}
+            onSave={(next) => {
+              setSettings(next)
+              setIsSettingsOpen(false)
+            }}
+            onReset={resetSettings}
+          />
+        </Suspense>
+      ) : null}
     </div>
   )
 }

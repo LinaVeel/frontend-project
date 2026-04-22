@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import styles from './InputArea.module.css'
 import Button from '../ui/Button'
+import ErrorMessage from '../ui/ErrorMessage'
 
 type Props = {
   isLoading?: boolean
   onSend: (text: string) => void
   onStop: () => void
+  error?: string | null
+  onRetry?: () => void
 }
 
 function AttachIcon() {
@@ -22,7 +25,7 @@ function AttachIcon() {
   )
 }
 
-export default function InputArea({ isLoading = false, onSend, onStop }: Props) {
+export default function InputArea({ isLoading = false, onSend, onStop, error, onRetry }: Props) {
   const [value, setValue] = useState('')
 
   const canSend = useMemo(() => value.trim().length > 0 && !isLoading, [value, isLoading])
@@ -38,39 +41,47 @@ export default function InputArea({ isLoading = false, onSend, onStop }: Props) 
   }
 
   return (
-    <div className={styles.root}>
-      <button className={styles.attach} type="button" aria-label="Прикрепить изображение" onClick={() => {}}>
-        <AttachIcon />
-      </button>
+    <div className={styles.wrapper}>
+      <div className={styles.root}>
+        <button className={styles.attach} type="button" aria-label="Прикрепить изображение" onClick={() => {}}>
+          <AttachIcon />
+        </button>
 
-      <textarea
-        className={styles.textarea}
-        value={value}
-        disabled={isLoading}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Сообщение..."
-        rows={rows}
-        onKeyDown={(e) => {
-          if (isLoading) return
-          if ((e.nativeEvent as KeyboardEvent).isComposing) return
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            submit()
-          }
-        }}
-      />
+        <textarea
+          className={styles.textarea}
+          value={value}
+          disabled={isLoading}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Сообщение..."
+          rows={rows}
+          onKeyDown={(e) => {
+            if (isLoading) return
+            if ((e.nativeEvent as KeyboardEvent).isComposing) return
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              submit()
+            }
+          }}
+        />
 
-      <div className={styles.actions}>
-        {isLoading ? (
-          <Button variant="secondary" onClick={onStop}>
-            Стоп
-          </Button>
-        ) : (
-          <Button disabled={!canSend} onClick={submit}>
-            Отправить
-          </Button>
-        )}
+        <div className={styles.actions}>
+          {isLoading ? (
+            <Button variant="secondary" onClick={onStop}>
+              Стоп
+            </Button>
+          ) : (
+            <Button disabled={!canSend} onClick={submit}>
+              Отправить
+            </Button>
+          )}
+        </div>
       </div>
+
+      {error ? (
+        <div className={styles.error}>
+          <ErrorMessage message={error} onRetry={onRetry} />
+        </div>
+      ) : null}
     </div>
   )
 }

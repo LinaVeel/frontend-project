@@ -3,7 +3,7 @@ import styles from './ChatWindow.module.css'
 import MessageList from './MessageList'
 import InputArea from './InputArea'
 import { useChat } from '../../app/providers/ChatProvider'
-import ErrorMessage from '../ui/ErrorMessage'
+import ErrorBoundary from '../ui/ErrorBoundary'
 import type { Message } from '../../app/providers/chatTypes'
 
 type Props = {
@@ -45,7 +45,7 @@ function SettingsIcon() {
 type VisibleMessage = Message & { role: 'user' | 'assistant' }
 
 export default function ChatWindow({ title, chatId, onOpenSettings, onOpenSidebar }: Props) {
-  const { state, sendMessage, stop } = useChat()
+  const { state, sendMessage, retryLast, stop } = useChat()
 
   const messages = useMemo(() => {
     if (!chatId) return []
@@ -86,20 +86,18 @@ export default function ChatWindow({ title, chatId, onOpenSettings, onOpenSideba
       </header>
 
       <div className={styles.messages}>
-        <MessageList messages={messages} isLoading={isLoading} endRef={endRef} />
+        <ErrorBoundary message="Ошибка рендера сообщений">
+          <MessageList messages={messages} isLoading={isLoading} endRef={endRef} />
+        </ErrorBoundary>
       </div>
-
-      {error ? (
-        <div className={styles.error}>
-          <ErrorMessage message={error} />
-        </div>
-      ) : null}
 
       <div className={styles.input}>
         <InputArea
           isLoading={isLoading}
           onSend={send}
           onStop={stop}
+          error={error}
+          onRetry={retryLast}
         />
       </div>
     </section>

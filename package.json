@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "analyze": "npx vite-bundle-visualizer",
     "preview": "vite preview"
   },
   "dependencies": {

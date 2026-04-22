@@ -29,12 +29,6 @@ export type Settings = {
   theme: ThemeMode
 }
 
-export type AuthState = {
-  credentials: string
-  scope: ScopeName
-  accessToken?: string
-}
-
 export type ChatState = {
   chats: Chat[]
   activeChatId: string | null
@@ -42,7 +36,6 @@ export type ChatState = {
   isLoadingByChatId: Record<string, boolean>
   errorByChatId: Record<string, string | null>
   settings: Settings
-  auth: AuthState | null
 }
 
 export type ChatAction =
@@ -56,8 +49,6 @@ export type ChatAction =
   | { type: 'SET_LOADING'; payload: { chatId: string; isLoading: boolean } }
   | { type: 'SET_ERROR'; payload: { chatId: string; error: string | null } }
   | { type: 'SET_SETTINGS'; payload: { settings: Settings } }
-  | { type: 'SET_AUTH'; payload: { auth: AuthState | null } }
-  | { type: 'SET_AUTH_ACCESS_TOKEN'; payload: { accessToken: string | undefined } }
 
 export const DEFAULT_SETTINGS: Settings = {
   model: 'GigaChat',

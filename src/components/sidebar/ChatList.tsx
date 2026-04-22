@@ -23,9 +23,9 @@ export default function ChatList({ chats, activeChatId, onSelectChat, onEditChat
           key={chat.id}
           chat={chat}
           isActive={chat.id === activeChatId}
-          onClick={() => onSelectChat(chat.id)}
-          onEdit={() => onEditChat(chat.id)}
-          onDelete={() => onDeleteChat(chat.id)}
+          onSelectChat={onSelectChat}
+          onEditChat={onEditChat}
+          onDeleteChat={onDeleteChat}
         />
       ))}
     </div>

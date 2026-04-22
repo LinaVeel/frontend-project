@@ -1,7 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
-import AppLayout from '../../components/layout/AppLayout'
 
 export const router = createBrowserRouter([
-  { path: '/', element: <AppLayout /> },
-  { path: '/chat/:id', element: <AppLayout /> },
+  { path: '/', lazy: () => import('./routeIndex') },
+  { path: '/chat/:id', lazy: () => import('./routeChat') },
 ])

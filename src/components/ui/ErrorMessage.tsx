@@ -1,7 +1,10 @@
 import styles from './ErrorMessage.module.css'
+import Button from './Button'
 
 type Props = {
   message: string
+  onRetry?: () => void
+  retryLabel?: string
 }
 
 function AlertIcon() {
@@ -32,11 +35,18 @@ function AlertIcon() {
   )
 }
 
-export default function ErrorMessage({ message }: Props) {
+export default function ErrorMessage({ message, onRetry, retryLabel = 'Повторить' }: Props) {
   return (
     <div className={styles.root} role="alert">
       <AlertIcon />
-      <span>{message}</span>
+      <span className={styles.message}>{message}</span>
+      {onRetry ? (
+        <span className={styles.actions}>
+          <Button variant="secondary" onClick={onRetry}>
+            {retryLabel}
+          </Button>
+        </span>
+      ) : null}
     </div>
   )
 }

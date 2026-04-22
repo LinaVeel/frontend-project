@@ -1,13 +1,14 @@
 import styles from './ChatItem.module.css'
+import { memo } from 'react'
 import type { MouseEventHandler, ReactNode } from 'react'
 import type { ChatListItem } from './ChatList'
 
 type Props = {
   chat: ChatListItem
   isActive: boolean
-  onClick: () => void
-  onEdit: () => void
-  onDelete: () => void
+  onSelectChat: (id: string) => void
+  onEditChat: (id: string) => void
+  onDeleteChat: (id: string) => void
 }
 
 function IconButton({ label, onClick, children }: { label: string; onClick: MouseEventHandler<HTMLButtonElement>; children: ReactNode }) {
@@ -74,9 +75,14 @@ function TrashIcon() {
   )
 }
 
-export default function ChatItem({ chat, isActive, onClick, onEdit, onDelete }: Props) {
+function ChatItem({ chat, isActive, onSelectChat, onEditChat, onDeleteChat }: Props) {
   return (
-    <div className={`${styles.root} ${isActive ? styles.active : ''}`} role="button" tabIndex={0} onClick={onClick}>
+    <div
+      className={`${styles.root} ${isActive ? styles.active : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelectChat(chat.id)}
+    >
       <div className={styles.main}>
         <div className={styles.titleRow}>
           <div className={styles.title} title={chat.title}>
@@ -89,7 +95,7 @@ export default function ChatItem({ chat, isActive, onClick, onEdit, onDelete }: 
             label="Редактировать чат"
             onClick={(e) => {
               e.stopPropagation()
-              onEdit()
+              onEditChat(chat.id)
             }}
           >
             <PencilIcon />
@@ -98,7 +104,7 @@ export default function ChatItem({ chat, isActive, onClick, onEdit, onDelete }: 
             label="Удалить чат"
             onClick={(e) => {
               e.stopPropagation()
-              onDelete()
+              onDeleteChat(chat.id)
             }}
           >
             <TrashIcon />
@@ -108,3 +114,15 @@ export default function ChatItem({ chat, isActive, onClick, onEdit, onDelete }: 
     </div>
   )
 }
+
+export default memo(ChatItem, (prev, next) => {
+  return (
+    prev.isActive === next.isActive &&
+    prev.chat.id === next.chat.id &&
+    prev.chat.title === next.chat.title &&
+    prev.chat.lastMessageAtLabel === next.chat.lastMessageAtLabel &&
+    prev.onSelectChat === next.onSelectChat &&
+    prev.onEditChat === next.onEditChat &&
+    prev.onDeleteChat === next.onDeleteChat
+  )
+})

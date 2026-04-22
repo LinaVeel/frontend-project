@@ -1,5 +1,5 @@
 .root {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
@@ -8,4 +8,14 @@
   background: rgba(220, 38, 38, 0.08);
   color: var(--color-danger);
   font-size: 13px;
+  max-width: 100%;
+}
+
+.message {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.actions {
+  flex: 0 0 auto;
 }

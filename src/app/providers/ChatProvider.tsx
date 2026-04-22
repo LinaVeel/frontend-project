@@ -1,17 +1,35 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react'
 import { chatCompletion, fetchAccessToken, streamChatCompletion } from '../../api/gigachat'
 import { loadVersioned, saveVersioned } from '../../utils/storage'
-import type { AuthState, Chat, ChatAction, ChatState, Message, Settings } from './chatTypes'
+import type { Chat, ChatAction, ChatState, Message, ScopeName, Settings } from './chatTypes'
 import { DEFAULT_SETTINGS } from './chatTypes'
 
 const STORAGE_KEY = 'gigachat_shell_state'
+
+type Env = Record<string, string | boolean | undefined>
+
+function getEnv(): Env {
+  return import.meta.env as unknown as Env
+}
+
+function envString(name: string): string {
+  const v = getEnv()[name]
+  return typeof v === 'string' ? v.trim() : ''
+}
+
+function envScope(): ScopeName {
+  const raw = envString('VITE_GIGACHAT_SCOPE')
+  if (raw === 'GIGACHAT_API_B2B' || raw === 'GIGACHAT_API_CORP' || raw === 'GIGACHAT_API_PERS') {
+    return raw
+  }
+  return 'GIGACHAT_API_PERS'
+}
 
 type PersistedState = {
   chats: Chat[]
   activeChatId: string | null
   messagesByChatId: Record<string, Message[]>
   settings: Settings
-  auth: AuthState | null
 }
 
 function makeId(prefix: string) {
@@ -62,7 +80,6 @@ function normalizeState(persisted: PersistedState | null): ChatState {
     isLoadingByChatId: {},
     errorByChatId: {},
     settings: persisted?.settings ?? DEFAULT_SETTINGS,
-    auth: persisted?.auth ?? null,
   }
 }
 
@@ -214,24 +231,6 @@ function reducer(state: ChatState, action: ChatAction): ChatState {
       }
     }
 
-    case 'SET_AUTH': {
-      return {
-        ...state,
-        auth: action.payload.auth,
-      }
-    }
-
-    case 'SET_AUTH_ACCESS_TOKEN': {
-      if (!state.auth) return state
-      return {
-        ...state,
-        auth: {
-          ...state.auth,
-          accessToken: action.payload.accessToken,
-        },
-      }
-    }
-
     default:
       return state
   }
@@ -244,11 +243,11 @@ type ChatContextValue = {
   renameChat: (chatId: string, title: string) => void
   deleteChat: (chatId: string) => void
 
-  setAuth: (auth: AuthState | null) => void
   setSettings: (settings: Settings) => void
   resetSettings: () => void
 
   sendMessage: (text: string) => Promise<void>
+  retryLast: () => Promise<void>
   stop: () => void
 }
 
@@ -261,6 +260,33 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   })
 
   const abortRef = useRef<AbortController | null>(null)
+  const accessTokenRef = useRef<string | null>(null)
+  const lastRequestRef = useRef<{
+    chatId: string
+    assistantMessageId: string
+    messages: Array<Pick<Message, 'role' | 'content'>>
+  } | null>(null)
+
+  const getAccessToken = useCallback(async (signal?: AbortSignal): Promise<string> => {
+    const provided = envString('VITE_GIGACHAT_ACCESS_TOKEN').replace(/^Bearer\s+/i, '').trim()
+    if (provided) return provided
+
+    if (accessTokenRef.current) return accessTokenRef.current
+
+    const credentialsBase64 = envString('VITE_GIGACHAT_CREDENTIALS_BASE64')
+    if (!credentialsBase64) {
+      throw new Error('VITE_GIGACHAT_ACCESS_TOKEN или VITE_GIGACHAT_CREDENTIALS_BASE64 не задан')
+    }
+
+    const token = await fetchAccessToken({
+      credentialsBase64,
+      scope: envScope(),
+      signal,
+    })
+
+    accessTokenRef.current = token
+    return token
+  }, [])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', state.settings.theme)
@@ -272,10 +298,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       activeChatId: state.activeChatId,
       messagesByChatId: state.messagesByChatId,
       settings: state.settings,
-      auth: state.auth,
     }
     saveVersioned(STORAGE_KEY, data)
-  }, [state.chats, state.activeChatId, state.messagesByChatId, state.settings, state.auth])
+  }, [state.chats, state.activeChatId, state.messagesByChatId, state.settings])
 
   const createChat = useCallback(() => {
     const id = makeId('c')
@@ -311,10 +336,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [state.activeChatId],
   )
 
-  const setAuth = useCallback((auth: AuthState | null) => {
-    dispatch({ type: 'SET_AUTH', payload: { auth } })
-  }, [])
-
   const setSettings = useCallback((settings: Settings) => {
     dispatch({ type: 'SET_SETTINGS', payload: { settings } })
   }, [])
@@ -335,6 +356,70 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.activeChatId])
 
+  const runRequest = useCallback(
+    async (params: {
+      chatId: string
+      assistantMessageId: string
+      messages: Array<Pick<Message, 'role' | 'content'>>
+    }) => {
+      const { chatId, assistantMessageId, messages } = params
+
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      const accessToken = await getAccessToken(controller.signal)
+
+      try {
+        let acc = ''
+        await streamChatCompletion(
+          {
+            accessToken,
+            model: state.settings.model,
+            temperature: state.settings.temperature,
+            topP: state.settings.topP,
+            maxTokens: state.settings.maxTokens,
+            messages,
+            signal: controller.signal,
+          },
+          (delta) => {
+            acc += delta
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              payload: { chatId, messageId: assistantMessageId, content: acc },
+            })
+          },
+        )
+      } catch (e) {
+        if (controller.signal.aborted) return
+
+        try {
+          const full = await chatCompletion({
+            accessToken,
+            model: state.settings.model,
+            temperature: state.settings.temperature,
+            topP: state.settings.topP,
+            maxTokens: state.settings.maxTokens,
+            messages,
+            signal: controller.signal,
+          })
+          dispatch({ type: 'UPDATE_MESSAGE', payload: { chatId, messageId: assistantMessageId, content: full } })
+        } catch (e) {
+          if (controller.signal.aborted) return
+
+          const msg = e instanceof Error ? e.message : 'Ошибка запроса'
+          dispatch({ type: 'SET_ERROR', payload: { chatId, error: msg } })
+        }
+      } finally {
+        if (abortRef.current === controller) {
+          abortRef.current = null
+        }
+        dispatch({ type: 'SET_LOADING', payload: { chatId, isLoading: false } })
+      }
+    },
+    [getAccessToken, state.settings],
+  )
+
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim()
@@ -344,35 +429,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (!chatId) return
 
       if (state.isLoadingByChatId[chatId]) return
-
-      const auth = state.auth
-
-      let accessToken = (auth?.accessToken || '').replace(/^Bearer\s+/i, '').trim()
-      if (!accessToken && auth?.credentials?.trim()) {
-        try {
-          const next = await fetchAccessToken({
-            credentialsBase64: auth.credentials.trim(),
-            scope: auth.scope,
-          })
-          accessToken = next
-          dispatch({ type: 'SET_AUTH_ACCESS_TOKEN', payload: { accessToken: next } })
-        } catch {
-          // Fallback: sometimes users paste a ready Bearer token into the field.
-          accessToken = auth.credentials.replace(/^Bearer\s+/i, '').trim()
-        }
-      }
-
-      if (!accessToken) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: {
-            chatId,
-            error:
-              'Нет токена: укажите Credentials (Base64) и настройте VITE_GIGACHAT_OAUTH_URL, либо вставьте готовый Bearer token.',
-          },
-        })
-        return
-      }
 
       dispatch({ type: 'SET_ERROR', payload: { chatId, error: null } })
 
@@ -409,61 +465,38 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       contextMessages.push({ role: 'user', content: trimmed })
 
-      abortRef.current?.abort()
-      const controller = new AbortController()
-      abortRef.current = controller
+      lastRequestRef.current = { chatId, assistantMessageId, messages: contextMessages }
 
       try {
-        let acc = ''
-        await streamChatCompletion(
-          {
-            accessToken,
-            model: state.settings.model,
-            temperature: state.settings.temperature,
-            topP: state.settings.topP,
-            maxTokens: state.settings.maxTokens,
-            messages: contextMessages,
-            signal: controller.signal,
-          },
-          (delta) => {
-            acc += delta
-            dispatch({
-              type: 'UPDATE_MESSAGE',
-              payload: { chatId, messageId: assistantMessageId, content: acc },
-            })
-          },
-        )
+        await runRequest({ chatId, assistantMessageId, messages: contextMessages })
       } catch (e) {
-        if (controller.signal.aborted) {
-          return
-        }
-        try {
-          const full = await chatCompletion({
-            accessToken,
-            model: state.settings.model,
-            temperature: state.settings.temperature,
-            topP: state.settings.topP,
-            maxTokens: state.settings.maxTokens,
-            messages: contextMessages,
-            signal: controller.signal,
-          })
-          dispatch({ type: 'UPDATE_MESSAGE', payload: { chatId, messageId: assistantMessageId, content: full } })
-        } catch (e) {
-          if (controller.signal.aborted) {
-            return
-          }
-          const msg = e instanceof Error ? e.message : 'Ошибка запроса'
-          dispatch({ type: 'SET_ERROR', payload: { chatId, error: msg } })
-        }
-      } finally {
-        if (abortRef.current === controller) {
-          abortRef.current = null
-        }
+        const msg = e instanceof Error ? e.message : 'Ошибка запроса'
+        dispatch({ type: 'SET_ERROR', payload: { chatId, error: msg } })
         dispatch({ type: 'SET_LOADING', payload: { chatId, isLoading: false } })
       }
     },
-    [state.activeChatId, state.auth, state.isLoadingByChatId, state.messagesByChatId, state.settings, createChat],
+    [state.activeChatId, state.isLoadingByChatId, state.messagesByChatId, state.settings, createChat, runRequest],
   )
+
+  const retryLast = useCallback(async () => {
+    const last = lastRequestRef.current
+    if (!last) return
+    const { chatId, assistantMessageId, messages } = last
+
+    if (state.isLoadingByChatId[chatId]) return
+
+    dispatch({ type: 'SET_ERROR', payload: { chatId, error: null } })
+    dispatch({ type: 'UPDATE_MESSAGE', payload: { chatId, messageId: assistantMessageId, content: '' } })
+    dispatch({ type: 'SET_LOADING', payload: { chatId, isLoading: true } })
+
+    try {
+      await runRequest({ chatId, assistantMessageId, messages })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Ошибка запроса'
+      dispatch({ type: 'SET_ERROR', payload: { chatId, error: msg } })
+      dispatch({ type: 'SET_LOADING', payload: { chatId, isLoading: false } })
+    }
+  }, [runRequest, state.isLoadingByChatId])
 
   const value = useMemo<ChatContextValue>(
     () => ({
@@ -472,13 +505,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setActiveChat,
       renameChat,
       deleteChat,
-      setAuth,
       setSettings,
       resetSettings,
       sendMessage,
+      retryLast,
       stop,
     }),
-    [state, createChat, setActiveChat, renameChat, deleteChat, setAuth, setSettings, resetSettings, sendMessage, stop],
+    [state, createChat, setActiveChat, renameChat, deleteChat, setSettings, resetSettings, sendMessage, retryLast, stop],
   )
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>

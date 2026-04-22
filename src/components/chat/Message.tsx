@@ -1,13 +1,13 @@
 import styles from './Message.module.css'
-import ReactMarkdown from 'react-markdown'
-import { useEffect, useRef, useState } from 'react'
-import rehypeHighlight from 'rehype-highlight'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 
 type Props = {
   variant: 'user' | 'assistant'
   content: string
   timestamp?: string
 }
+
+const MarkdownMessage = lazy(() => import('./MarkdownMessage'))
 
 function formatTime(value?: string) {
   if (!value) return ''
@@ -85,9 +85,9 @@ export default function Message({ variant, content, timestamp }: Props) {
         </div>
 
         <div className={styles.content}>
-          <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
-            {content}
-          </ReactMarkdown>
+          <Suspense fallback={<span>{content}</span>}>
+            <MarkdownMessage content={content} />
+          </Suspense>
         </div>
 
         {!isUser ? (

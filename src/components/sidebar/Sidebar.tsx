@@ -3,7 +3,7 @@ import SearchInput from './SearchInput'
 import ChatList from './ChatList'
 import Button from '../ui/Button'
 import { useChat } from '../../app/providers/ChatProvider'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 type Props = {
@@ -30,6 +30,45 @@ export default function Sidebar({
   const navigate = useNavigate()
   const { state, createChat, setActiveChat, renameChat, deleteChat } = useChat()
   const [searchQuery, setSearchQuery] = useState('')
+
+  const handleCreateChat = useCallback(() => {
+    const id = createChat()
+    setActiveChat(id)
+    navigate(`/chat/${id}`)
+    onNavigate?.()
+  }, [createChat, setActiveChat, navigate, onNavigate])
+
+  const handleSelectChat = useCallback(
+    (id: string) => {
+      setActiveChat(id)
+      navigate(`/chat/${id}`)
+      onNavigate?.()
+    },
+    [setActiveChat, navigate, onNavigate],
+  )
+
+  const handleEditChat = useCallback(
+    (id: string) => {
+      const chat = state.chats.find((c) => c.id === id)
+      const next = window.prompt('Новое название чата', chat?.title ?? '')
+      if (!next) return
+      renameChat(id, next.trim())
+    },
+    [state.chats, renameChat],
+  )
+
+  const handleDeleteChat = useCallback(
+    (id: string) => {
+      const chat = state.chats.find((c) => c.id === id)
+      const ok = window.confirm(`Удалить чат «${chat?.title ?? 'чат'}»?`)
+      if (!ok) return
+      deleteChat(id)
+      if (state.activeChatId === id) {
+        navigate('/')
+      }
+    },
+    [state.chats, state.activeChatId, deleteChat, navigate],
+  )
 
   const items = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
@@ -61,12 +100,7 @@ export default function Sidebar({
     <aside className={styles.root}>
       <div className={styles.header}>
         <Button
-          onClick={() => {
-            const id = createChat()
-            setActiveChat(id)
-            navigate(`/chat/${id}`)
-            onNavigate?.()
-          }}
+          onClick={handleCreateChat}
           leftIcon={<PlusIcon />}
         >
           Новый чат
@@ -81,26 +115,9 @@ export default function Sidebar({
         <ChatList
           chats={items}
           activeChatId={state.activeChatId}
-          onSelectChat={(id) => {
-            setActiveChat(id)
-            navigate(`/chat/${id}`)
-            onNavigate?.()
-          }}
-          onEditChat={(id) => {
-            const chat = state.chats.find((c) => c.id === id)
-            const next = window.prompt('Новое название чата', chat?.title ?? '')
-            if (!next) return
-            renameChat(id, next.trim())
-          }}
-          onDeleteChat={(id) => {
-            const chat = state.chats.find((c) => c.id === id)
-            const ok = window.confirm(`Удалить чат «${chat?.title ?? 'чат'}»?`)
-            if (!ok) return
-            deleteChat(id)
-            if (state.activeChatId === id) {
-              navigate('/')
-            }
-          }}
+          onSelectChat={handleSelectChat}
+          onEditChat={handleEditChat}
+          onDeleteChat={handleDeleteChat}
         />
       </div>
     </aside>
