@@ -3,6 +3,24 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    proxy: {
+      '/oauth': {
+        target: 'https://ngw.devices.sberbank.ru:9443',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/oauth\b/, '/api/v2/oauth'),
+      },
+      '/api/v1': {
+        target: 'https://gigachat.devices.sberbank.ru',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
   build: {
     rollupOptions: {
       output: {

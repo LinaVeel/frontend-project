@@ -41,6 +41,7 @@ export default function AuthForm({ onSubmit }: Props) {
             onBlur={() => setTouched(true)}
             placeholder="Base64 или Bearer …"
           />
+          <div className={styles.hint}>Примеры: <b>Bearer</b> eyJ… или просто eyJ…; либо <b>Base64</b> от "client_id:client_secret".</div>
           {error ? <ErrorMessage message={error} /> : null}
         </div>
 

@@ -3,6 +3,7 @@ import ChatWindow from '../chat/ChatWindow'
 import { useChat } from '../../app/providers/ChatProvider'
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import AuthForm from '../auth/AuthForm'
 
 const Sidebar = lazy(() => import('../sidebar/Sidebar'))
 const SettingsPanel = lazy(() => import('../settings/SettingsPanel'))
@@ -15,6 +16,8 @@ export default function AppLayout() {
     setSettings,
     resetSettings,
     setActiveChat,
+    hasAuth,
+    setAuth,
   } = useChat()
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -40,6 +43,10 @@ export default function AppLayout() {
   }, [state.chats, activeChatId])
 
   const title = activeChat?.title ?? ''
+
+  if (!hasAuth) {
+    return <AuthForm onSubmit={setAuth} />
+  }
 
   return (
     <div className={styles.root}>

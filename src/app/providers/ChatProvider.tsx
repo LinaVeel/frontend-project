@@ -1,10 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { chatCompletion, fetchAccessToken, streamChatCompletion } from '../../api/gigachat'
-import { loadVersioned, saveVersioned } from '../../utils/storage'
+import { loadFromStorage, saveToStorage, loadVersioned, saveVersioned } from '../../utils/storage'
 import type { Chat, ChatAction, ChatState, Message, ScopeName, Settings } from './chatTypes'
 import { DEFAULT_SETTINGS } from './chatTypes'
 
 const STORAGE_KEY = 'gigachat_shell_state'
+const AUTH_KEY = 'gigachat_shell_auth_v1'
 
 type Env = Record<string, string | boolean | undefined>
 
@@ -32,6 +33,43 @@ type PersistedState = {
   settings: Settings
 }
 
+type RuntimeAuth =
+  | { kind: 'token'; token: string }
+  | { kind: 'basic'; credentialsBase64: string; scope: ScopeName }
+  | null
+
+function isBase64Like(value: string): boolean {
+  const v = value.trim()
+  if (!v) return false
+  if (v.length < 16) return false
+  if (v.length % 4 !== 0) return false
+  return /^[A-Za-z0-9+/=]+$/.test(v)
+}
+
+function normalizeRuntimeAuth(raw: unknown): RuntimeAuth {
+  if (!raw || typeof raw !== 'object') return null
+  const anyRaw = raw as any
+  if (anyRaw.kind === 'token' && typeof anyRaw.token === 'string' && anyRaw.token.trim()) {
+    return { kind: 'token', token: anyRaw.token.trim() }
+  }
+  if (
+    anyRaw.kind === 'basic' &&
+    typeof anyRaw.credentialsBase64 === 'string' &&
+    anyRaw.credentialsBase64.trim() &&
+    (anyRaw.scope === 'GIGACHAT_API_PERS' || anyRaw.scope === 'GIGACHAT_API_B2B' || anyRaw.scope === 'GIGACHAT_API_CORP')
+  ) {
+    return { kind: 'basic', credentialsBase64: anyRaw.credentialsBase64.trim(), scope: anyRaw.scope }
+  }
+  return null
+}
+
+function envHasAuth(): boolean {
+  const token = envString('VITE_GIGACHAT_ACCESS_TOKEN').replace(/^Bearer\s+/i, '').trim()
+  if (token) return true
+  const credentialsBase64 = envString('VITE_GIGACHAT_CREDENTIALS_BASE64')
+  return Boolean(credentialsBase64)
+}
+
 function makeId(prefix: string) {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return `${prefix}_${crypto.randomUUID()}`
@@ -46,6 +84,30 @@ function nowIso() {
 function defaultChatTitle(index: number) {
   if (index === 1) return 'Новый чат'
   return `Диалог ${index}`
+}
+
+function normalizeSettings(input: unknown): Settings {
+  const base: Settings = { ...DEFAULT_SETTINGS }
+  if (!input || typeof input !== 'object') return base
+  const anyInput = input as Partial<Record<keyof Settings, unknown>>
+
+  const model = anyInput.model
+  if (model === 'GigaChat' || model === 'GigaChat-Plus' || model === 'GigaChat-Pro' || model === 'GigaChat-Max') {
+    base.model = model
+  }
+
+  const theme = anyInput.theme
+  if (theme === 'light' || theme === 'dark') base.theme = theme
+
+  if (typeof anyInput.systemPrompt === 'string') base.systemPrompt = anyInput.systemPrompt
+
+  const toNumber = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
+  base.temperature = toNumber(anyInput.temperature) ?? base.temperature
+  base.topP = toNumber(anyInput.topP) ?? base.topP
+  base.maxTokens = toNumber(anyInput.maxTokens) ?? base.maxTokens
+  base.repetitionPenalty = toNumber(anyInput.repetitionPenalty) ?? base.repetitionPenalty
+
+  return base
 }
 
 function normalizeState(persisted: PersistedState | null): ChatState {
@@ -79,7 +141,7 @@ function normalizeState(persisted: PersistedState | null): ChatState {
     messagesByChatId,
     isLoadingByChatId: {},
     errorByChatId: {},
-    settings: persisted?.settings ?? DEFAULT_SETTINGS,
+    settings: normalizeSettings(persisted?.settings),
   }
 }
 
@@ -246,6 +308,10 @@ type ChatContextValue = {
   setSettings: (settings: Settings) => void
   resetSettings: () => void
 
+  hasAuth: boolean
+  setAuth: (params: { credentials: string; scope: ScopeName }) => void
+  clearAuth: () => void
+
   sendMessage: (text: string) => Promise<void>
   retryLast: () => Promise<void>
   stop: () => void
@@ -259,6 +325,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return normalizeState(persisted)
   })
 
+  const [runtimeAuth, setRuntimeAuth] = useState<RuntimeAuth>(() => {
+    const saved = loadFromStorage<unknown>(AUTH_KEY)
+    return normalizeRuntimeAuth(saved)
+  })
+
   const abortRef = useRef<AbortController | null>(null)
   const accessTokenRef = useRef<string | null>(null)
   const lastRequestRef = useRef<{
@@ -267,25 +338,65 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     messages: Array<Pick<Message, 'role' | 'content'>>
   } | null>(null)
 
-  const getAccessToken = useCallback(async (signal?: AbortSignal): Promise<string> => {
-    const provided = envString('VITE_GIGACHAT_ACCESS_TOKEN').replace(/^Bearer\s+/i, '').trim()
-    if (provided) return provided
+  const getAccessToken = useCallback(
+    async (signal?: AbortSignal): Promise<string> => {
+      const envToken = envString('VITE_GIGACHAT_ACCESS_TOKEN').replace(/^Bearer\s+/i, '').trim()
+      if (envToken) return envToken
 
-    if (accessTokenRef.current) return accessTokenRef.current
+      if (runtimeAuth?.kind === 'token') return runtimeAuth.token
 
-    const credentialsBase64 = envString('VITE_GIGACHAT_CREDENTIALS_BASE64')
-    if (!credentialsBase64) {
-      throw new Error('VITE_GIGACHAT_ACCESS_TOKEN или VITE_GIGACHAT_CREDENTIALS_BASE64 не задан')
+      if (accessTokenRef.current) return accessTokenRef.current
+
+      const envCredentialsBase64 = envString('VITE_GIGACHAT_CREDENTIALS_BASE64')
+      const runtimeCredentialsBase64 = runtimeAuth?.kind === 'basic' ? runtimeAuth.credentialsBase64 : ''
+      const credentialsBase64 = envCredentialsBase64 || runtimeCredentialsBase64
+
+      if (!credentialsBase64) {
+        throw new Error('Не задан токен/credentials для GigaChat. Укажите VITE_GIGACHAT_ACCESS_TOKEN или введите данные в форме входа.')
+      }
+
+      const scope = runtimeAuth?.kind === 'basic' ? runtimeAuth.scope : envScope()
+      const token = await fetchAccessToken({
+        credentialsBase64,
+        scope,
+        signal,
+      })
+
+      accessTokenRef.current = token
+      return token
+    },
+    [runtimeAuth],
+  )
+
+  const hasAuth = useMemo(() => envHasAuth() || runtimeAuth != null, [runtimeAuth])
+
+  const setAuth = useCallback((params: { credentials: string; scope: ScopeName }) => {
+    const raw = params.credentials.trim()
+    if (!raw) return
+
+    const bearerMatch = raw.match(/^Bearer\s+(.+)$/i)
+    const basicMatch = raw.match(/^Basic\s+(.+)$/i)
+
+    let next: RuntimeAuth = null
+    if (bearerMatch && bearerMatch[1]?.trim()) {
+      next = { kind: 'token', token: bearerMatch[1].trim() }
+    } else if (basicMatch && basicMatch[1]?.trim()) {
+      next = { kind: 'basic', credentialsBase64: basicMatch[1].trim(), scope: params.scope }
+    } else if (isBase64Like(raw)) {
+      next = { kind: 'basic', credentialsBase64: raw, scope: params.scope }
+    } else {
+      next = { kind: 'token', token: raw }
     }
 
-    const token = await fetchAccessToken({
-      credentialsBase64,
-      scope: envScope(),
-      signal,
-    })
+    setRuntimeAuth(next)
+    saveToStorage(AUTH_KEY, next)
+    accessTokenRef.current = null
+  }, [])
 
-    accessTokenRef.current = token
-    return token
+  const clearAuth = useCallback(() => {
+    setRuntimeAuth(null)
+    saveToStorage(AUTH_KEY, null)
+    accessTokenRef.current = null
   }, [])
 
   useEffect(() => {
@@ -379,6 +490,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             temperature: state.settings.temperature,
             topP: state.settings.topP,
             maxTokens: state.settings.maxTokens,
+            repetitionPenalty: state.settings.repetitionPenalty,
             messages,
             signal: controller.signal,
           },
@@ -400,6 +512,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             temperature: state.settings.temperature,
             topP: state.settings.topP,
             maxTokens: state.settings.maxTokens,
+            repetitionPenalty: state.settings.repetitionPenalty,
             messages,
             signal: controller.signal,
           })
@@ -510,8 +623,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       sendMessage,
       retryLast,
       stop,
+      hasAuth,
+      setAuth,
+      clearAuth,
     }),
-    [state, createChat, setActiveChat, renameChat, deleteChat, setSettings, resetSettings, sendMessage, retryLast, stop],
+    [
+      state,
+      createChat,
+      setActiveChat,
+      renameChat,
+      deleteChat,
+      setSettings,
+      resetSettings,
+      sendMessage,
+      retryLast,
+      stop,
+      hasAuth,
+      setAuth,
+      clearAuth,
+    ],
   )
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>

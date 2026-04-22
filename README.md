@@ -16,6 +16,20 @@
 
 ## Запуск локально
 
+### Через Docker
+
+1) Запуск dev-сервера:
+
+`docker compose up --build`
+
+2) Открыть в браузере:
+
+`http://localhost:5173`
+
+3) Если появится экран **Вход**, вставьте токен/credentials (см. ниже).
+
+### Без Docker
+
 1) Клонировать репозиторий:
 
 `git clone <URL>`
@@ -31,6 +45,24 @@
 4) Запуск dev-сервера:
 
 `npm run dev`
+
+## Где взять токен / credentials
+
+Этот проект ходит напрямую в GigaChat API. Чтобы “общение с ИИ” работало, вам нужен доступ к GigaChat:
+
+- **Вариант A (проще):** готовый `access token` (строка вида `eyJ…`), который обычно выдаёт преподаватель/методичка/личный кабинет.
+- **Вариант B:** `client_id` и `client_secret` (Client Credentials). Из них приложение получает токен по OAuth.
+
+Если у вас **нет ни токена, ни client credentials**, технически отправлять запросы в GigaChat нельзя — попросите эти данные у преподавателя.
+
+### Как сделать Base64 из `client_id:client_secret` (Windows PowerShell)
+
+`[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('client_id:client_secret'))`
+
+В приложении можно вставлять:
+
+- `Bearer <token>` или просто `<token>`
+- либо Base64 строку (или `Basic <base64>`)
 
 ## Переменные окружения
 

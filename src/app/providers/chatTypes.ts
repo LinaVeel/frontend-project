@@ -27,6 +27,7 @@ export type Settings = {
   maxTokens: number
   systemPrompt: string
   theme: ThemeMode
+  repetitionPenalty: number
 }
 
 export type ChatState = {
@@ -55,6 +56,7 @@ export const DEFAULT_SETTINGS: Settings = {
   temperature: 0.8,
   topP: 0.9,
   maxTokens: 1024,
+  repetitionPenalty: 1,
   systemPrompt: 'Ты — полезный ассистент. Отвечай кратко и по делу.',
   theme: 'light',
 }

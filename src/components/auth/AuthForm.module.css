@@ -21,6 +21,18 @@
   font-weight: 900;
 }
 
+.note {
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.35;
+}
+
 .field {
   display: flex;
   flex-direction: column;

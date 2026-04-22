@@ -77,6 +77,17 @@ export default function SettingsPanel({ isOpen, settings, onClose, onSave, onRes
           </div>
 
           <div className={styles.field}>
+            <div className={styles.label}>Repetition penalty: {draft.repetitionPenalty.toFixed(2)}</div>
+            <Slider
+              min={0}
+              max={2}
+              step={0.01}
+              value={draft.repetitionPenalty}
+              onChange={(v) => setDraft((s) => ({ ...s, repetitionPenalty: v }))}
+            />
+          </div>
+
+          <div className={styles.field}>
             <div className={styles.label}>Max Tokens</div>
             <input
               className={styles.input}
