@@ -1,9 +1,9 @@
 # GigaChat Shell
+# Сделано студенткой Лукьяновой Алиной
 
 ## Демо
 
-- Ссылка: TODO (добавьте после деплоя)
-- Скриншоты/видео: TODO
+- Ссылка на видеодемонстрацию: https://drive.google.com/file/d/1UWTcqYUA4pjmuMbneBu-ypN_Oy9Jd4Jd/view?usp=drive_link
 
 ## Стек
 
@@ -14,81 +14,107 @@
 - Стейт-менеджмент: React Context + `useReducer` (см. `ChatProvider`)
 - Стили: CSS Modules
 
-## Запуск локально
+## Быстрый старт
 
-### Через Docker
+### Через Docker (dev)
 
-1) Запуск dev-сервера:
+В репозитории есть [compose.yaml](compose.yaml). Он поднимает Vite dev-сервер в контейнере.
+
+1) Запуск:
 
 `docker compose up --build`
 
-2) Открыть в браузере:
+2) Открыть:
 
 `http://localhost:5173`
 
-3) Если появится экран **Вход**, вставьте токен/credentials (см. ниже).
+3) Если появился экран **Вход** — см. раздел “Авторизация”.
 
-### Без Docker
+### Без Docker (dev)
 
-1) Клонировать репозиторий:
-
-`git clone <URL>`
-
-2) Установить зависимости:
+1) Установить зависимости:
 
 `npm install`
 
-3) Создать `.env` из примера и заполнить переменные:
+2) (Опционально) Создать `.env` из примера:
 
 `cp .env.example .env`
 
-4) Запуск dev-сервера:
+3) Запуск dev-сервера:
 
 `npm run dev`
 
-## Где взять токен / credentials
+4) Открыть:
 
-Этот проект ходит напрямую в GigaChat API. Чтобы “общение с ИИ” работало, вам нужен доступ к GigaChat:
+`http://localhost:5173`
 
-- **Вариант A (проще):** готовый `access token` (строка вида `eyJ…`), который обычно выдаёт преподаватель/методичка/личный кабинет.
-- **Вариант B:** `client_id` и `client_secret` (Client Credentials). Из них приложение получает токен по OAuth.
+## Авторизация
 
-Если у вас **нет ни токена, ни client credentials**, технически отправлять запросы в GigaChat нельзя — попросите эти данные у преподавателя.
+Приложение поддерживает 2 варианта:
 
-### Как сделать Base64 из `client_id:client_secret` (Windows PowerShell)
+### Вариант A — Bearer access token
 
-`[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('client_id:client_secret'))`
+В поле **Credentials** вставьте:
 
-В приложении можно вставлять:
+- `Bearer <token>`
+- или просто `<token>`
 
-- `Bearer <token>` или просто `<token>`
-- либо Base64 строку (или `Basic <base64>`)
+Токен можно также задать через `VITE_GIGACHAT_ACCESS_TOKEN` (без префикса `Bearer`).
+
+### Вариант B — Basic credentials (client_id:client_secret → Base64)
+
+Если у вас есть пара `client_id`/`client_secret`, приложение может само получить `access_token` через OAuth (grant_type=client_credentials).
+
+1) Сгенерируйте Base64 от строки `client_id:client_secret`.
+
+PowerShell:
+
+`[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("<client_id>:<client_secret>"))`
+
+bash/zsh:
+
+`printf "%s" "<client_id>:<client_secret>" | base64`
+
+2) Вставьте в поле **Credentials**:
+
+- `Basic <base64>`
+- или просто `<base64>`
+
+3) Выберите правильный **Scope** (обычно `GIGACHAT_API_PERS`) и нажмите “Войти”.
+
+Примечание: введённые данные сохраняются в `localStorage` (чтобы не вводить их каждый раз).
+
+## Доступ к GigaChat
+
+Чтобы всё работало, нужен доступ к GigaChat API в кабинете разработчика:
+
+https://developers.sber.ru/portal/products/gigachat-api
 
 ## Переменные окружения
 
-Все переменные должны быть заданы через `.env` / настройки хостинга (Vercel/Netlify/GitHub Pages) и начинаться с `VITE_`.
+Все переменные задаются через `.env` / настройки хостинга и должны начинаться с `VITE_`.
+
+Dev-режим:
+
+- `VITE_GIGACHAT_OAUTH_URL` можно **не задавать** — OAuth идёт через `/oauth` (прокси Vite).
+- `VITE_GIGACHAT_BASE_URL` можно не задавать — API идёт через `/api/v1` (прокси Vite).
+
+Prod-режим:
+
+- если вы НЕ используете backend, укажите `VITE_GIGACHAT_OAUTH_URL` явным URL (см. таблицу) или задайте готовый `VITE_GIGACHAT_ACCESS_TOKEN`.
 
 | Переменная | Описание |
 |---|---|
-| `VITE_GIGACHAT_BASE_URL` | Базовый URL API (по умолчанию `https://gigachat.devices.sberbank.ru/api/v1`) |
-| `VITE_GIGACHAT_OAUTH_URL` | OAuth endpoint для получения токена (client_credentials) |
-| `VITE_GIGACHAT_ACCESS_TOKEN` | Готовый access token (без префикса `Bearer`), опционально |
-| `VITE_GIGACHAT_CREDENTIALS_BASE64` | Basic credentials в Base64 (`client_id:client_secret`), опционально |
-| `VITE_GIGACHAT_SCOPE` | Scope: `GIGACHAT_API_PERS` \| `GIGACHAT_API_B2B` \| `GIGACHAT_API_CORP` |
+| `VITE_GIGACHAT_BASE_URL` | Базовый URL API. По умолчанию: `https://gigachat.devices.sberbank.ru/api/v1`. В dev можно использовать прокси `/api/v1`. |
+| `VITE_GIGACHAT_OAUTH_URL` | OAuth endpoint для получения токена (client_credentials). В prod укажите полный URL, например `https://ngw.devices.sberbank.ru:9443/api/v2/oauth`. |
+| `VITE_GIGACHAT_ACCESS_TOKEN` | Готовый access token (без префикса `Bearer`). Если задан — OAuth не нужен. |
+| `VITE_GIGACHAT_CREDENTIALS_BASE64` | Basic credentials в Base64 (`client_id:client_secret`). Альтернатива форме входа. |
+| `VITE_GIGACHAT_SCOPE` | Scope: `GIGACHAT_API_PERS` \| `GIGACHAT_API_B2B` \| `GIGACHAT_API_CORP`. По умолчанию `GIGACHAT_API_PERS`. |
 
-## Аудит бандла
+## Troubleshooting
 
-- Сгенерировать отчет визуализатора:
+- `OAuth: HTTP 401/400` — неверные credentials/scope. Проверьте Base64 от `client_id:client_secret` и выбранный scope.
+- `OAuth: HTTP 500` в dev/Docker — часто проблема TLS/сертификатов на прокси. В этом проекте в dev-прокси отключена строгая TLS-проверка (см. [vite.config.ts](vite.config.ts)).
+- `Не удалось выполнить запрос (возможен CORS/сеть)` — запрос не дошёл до прокси/сервиса. Проверьте, что вы в dev ходите на `http://localhost:5173`, а Vite поднят.
 
-`npm run analyze`
 
-- Скриншот:
-  1) Запустите команду выше (она откроет/сгенерирует визуализацию бандла)
-  2) Сделайте скриншот treemap
-  3) Добавьте файл в `docs/` и вставьте ссылку в этот README (TODO)
-
-## Деплой (Vercel)
-
-- Добавьте env-переменные из секции выше в настройках проекта на Vercel
-- Для корректной работы React Router уже добавлен `vercel.json` (SPA rewrite на `index.html`)
-- После деплоя обновите секцию **Демо** публичной ссылкой
