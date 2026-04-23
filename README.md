@@ -14,6 +14,40 @@
 - Стейт-менеджмент: React Context + `useReducer` (см. `ChatProvider`)
 - Стили: CSS Modules
 
+## Запуск локально
+
+1) Клонировать репозиторий и перейти в папку проекта:
+
+`git clone <repo-url>`
+
+`cd <project-folder>`
+
+2) Установить зависимости:
+
+`npm install`
+
+3) Заполнить переменные окружения:
+
+- Создайте файл `.env` на основе примера `.env.example`.
+
+PowerShell:
+
+`Copy-Item .env.example .env`
+
+bash/zsh:
+
+`cp .env.example .env`
+
+- Откройте `.env` и укажите нужные значения (см. секцию “Переменные окружения”).
+
+4) Запустить dev-сервер:
+
+`npm run dev`
+
+5) Открыть в браузере:
+
+`http://localhost:5173`
+
 ## Быстрый старт
 
 ### Через Docker (dev)
@@ -105,8 +139,8 @@ Prod-режим:
 
 | Переменная | Описание |
 |---|---|
-| `VITE_GIGACHAT_BASE_URL` | Базовый URL API. По умолчанию: `https://gigachat.devices.sberbank.ru/api/v1`. В dev можно использовать прокси `/api/v1`. |
-| `VITE_GIGACHAT_OAUTH_URL` | OAuth endpoint для получения токена (client_credentials). В prod укажите полный URL, например `https://ngw.devices.sberbank.ru:9443/api/v2/oauth`. |
+| `VITE_GIGACHAT_BASE_URL` | Базовый URL GigaChat API. Если не задан — используется значение по умолчанию в коде. В dev можно использовать прокси `/api/v1`. |
+| `VITE_GIGACHAT_OAUTH_URL` | OAuth endpoint для получения токена (client_credentials). В dev обычно не нужен (идёт через `/oauth` прокси). |
 | `VITE_GIGACHAT_ACCESS_TOKEN` | Готовый access token (без префикса `Bearer`). Если задан — OAuth не нужен. |
 | `VITE_GIGACHAT_CREDENTIALS_BASE64` | Basic credentials в Base64 (`client_id:client_secret`). Альтернатива форме входа. |
 | `VITE_GIGACHAT_SCOPE` | Scope: `GIGACHAT_API_PERS` \| `GIGACHAT_API_B2B` \| `GIGACHAT_API_CORP`. По умолчанию `GIGACHAT_API_PERS`. |
